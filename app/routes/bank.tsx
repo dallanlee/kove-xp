@@ -1,6 +1,6 @@
-import { data, redirect, useLoaderData } from 'react-router'
+import { data, useLoaderData } from 'react-router'
 import type { LoaderFunctionArgs } from 'react-router'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/auth'
 import type { Payout } from '@/types/database'
 
 function formatMinutes(mins: number): string {
@@ -12,9 +12,7 @@ function formatMinutes(mins: number): string {
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const { supabase, headers } = createSupabaseServerClient(request)
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw redirect('/login')
+  const { supabase, headers } = await requireAuth(request)
 
   const [{ data: family }, { data: payouts }] = await Promise.all([
     supabase.from('families').select('dollar_balance, screen_time_minutes, xp_balance').single(),

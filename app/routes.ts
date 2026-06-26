@@ -6,4 +6,6 @@ export default [
   route('bank', 'routes/bank.tsx'),
   route('parent', 'routes/parent.tsx'),
   route('login', 'routes/login.tsx'),
+  route('history', 'routes/history.tsx'),
+  route('history/:date', 'routes/history.$date.tsx'),
 ] satisfies RouteConfig

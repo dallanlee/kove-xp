@@ -1,6 +1,6 @@
-import { data, redirect, useFetcher, useLoaderData } from 'react-router'
+import { data, useFetcher, useLoaderData } from 'react-router'
 import type { LoaderFunctionArgs, ActionFunctionArgs } from 'react-router'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/auth'
 import { getTodayMT, formatFriendlyDate } from '@/lib/date'
 import { updateStreakAfterMorningCompletion, checkPerfectDay } from '@/lib/streaks'
 import PointsBar from '@/components/PointsBar'
@@ -14,13 +14,6 @@ const PERIOD_LABELS: Record<string, string> = {
   health: 'Health',
 }
 const PERIOD_ORDER = ['morning', 'afternoon', 'bedtime', 'health']
-
-async function requireAuth(request: Request) {
-  const { supabase, headers } = createSupabaseServerClient(request)
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw redirect('/login')
-  return { supabase, headers }
-}
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { supabase, headers } = await requireAuth(request)

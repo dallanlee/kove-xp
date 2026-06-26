@@ -1,7 +1,7 @@
-import { data, redirect, useFetcher, useLoaderData } from 'react-router'
+import { data, useFetcher, useLoaderData } from 'react-router'
 import type { LoaderFunctionArgs, ActionFunctionArgs } from 'react-router'
 import { useState, useEffect } from 'react'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/auth'
 import { getTodayMT } from '@/lib/date'
 import { runSundayPayout } from '@/lib/payout'
 
@@ -17,13 +17,6 @@ const PENALTIES = [
   { offense: 'Bad eating choices', xp: -50 },
   { offense: 'Excessive rudeness / yelling / whining', xp: -50 },
 ]
-
-async function requireAuth(request: Request) {
-  const { supabase, headers } = createSupabaseServerClient(request)
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw redirect('/login')
-  return { supabase, headers }
-}
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { headers } = await requireAuth(request)

@@ -66,9 +66,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <span className="text-xs">Bank</span>
             </NavLink>
             <NavLink
+              to="/history"
+              className={({ isActive }) =>
+                `flex flex-col items-center gap-1 py-1 px-3 transition-colors ${isActive ? 'text-blue-400' : 'text-slate-400 hover:text-white'}`
+              }
+            >
+              <span className="text-2xl">📅</span>
+              <span className="text-xs">History</span>
+            </NavLink>
+            <NavLink
               to="/parent"
               className={({ isActive }) =>
-                `flex flex-col items-center gap-1 py-1 px-4 transition-colors ${isActive ? 'text-blue-400' : 'text-slate-400 hover:text-white'}`
+                `flex flex-col items-center gap-1 py-1 px-3 transition-colors ${isActive ? 'text-blue-400' : 'text-slate-400 hover:text-white'}`
               }
             >
               <span className="text-2xl">🔒</span>

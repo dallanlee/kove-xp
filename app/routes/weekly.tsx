@@ -1,18 +1,11 @@
-import { data, redirect, useFetcher, useLoaderData } from 'react-router'
+import { data, useFetcher, useLoaderData } from 'react-router'
 import type { LoaderFunctionArgs, ActionFunctionArgs } from 'react-router'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/auth'
 import { getTodayMT, getMostRecentMondayMT, addDaysToDate, formatFriendlyDate } from '@/lib/date'
 import StreakCounter from '@/components/StreakCounter'
 import type { Task } from '@/types/database'
 
 const MILESTONES = [3, 7, 14]
-
-async function requireAuth(request: Request) {
-  const { supabase, headers } = createSupabaseServerClient(request)
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw redirect('/login')
-  return { supabase, headers }
-}
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { supabase, headers } = await requireAuth(request)
