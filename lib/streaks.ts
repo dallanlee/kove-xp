@@ -65,6 +65,7 @@ export async function updateStreakAfterMorningCompletion(
       event_type: 'streak_bonus',
       task_id: null,
       event_date: date,
+      actor: 'kove',
     })
     if (eventError) throw eventError
   }
@@ -104,6 +105,7 @@ export async function checkPerfectDay(
     event_type: 'perfect_day',
     task_id: null,
     event_date: date,
+    actor: 'kove',
   })
   if (error) throw error
 
