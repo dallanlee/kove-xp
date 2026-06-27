@@ -33,7 +33,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     supabase.from('xp_events').select('*').eq('event_date', today).order('created_at'),
   ])
 
-  const todayPts = (xpEvents || []).reduce((sum: number, e: { xp_delta: number }) => sum + e.xp_delta, 0)
+const todayPts = (xpEvents || []).reduce((sum: number, e: { xp_delta: number }) => sum + e.xp_delta, 0)
   const completedTaskIds = (completions || []).map((c: { task_id: string }) => c.task_id)
 
   return data({ tasks: (tasks || []) as Task[], completedTaskIds, family, todayPts, today, xpEvents: (xpEvents || []) as XpEvent[] }, { headers })
