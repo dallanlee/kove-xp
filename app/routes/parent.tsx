@@ -1,4 +1,4 @@
-import { data, useFetcher, useLoaderData } from 'react-router'
+import { data, useFetcher, useLoaderData, redirect } from 'react-router'
 import type { LoaderFunctionArgs, ActionFunctionArgs } from 'react-router'
 import { useState, useEffect } from 'react'
 import { requireParent } from '@/lib/auth'
@@ -63,6 +63,10 @@ export async function action({ request }: ActionFunctionArgs) {
     if (error) return data({ error: error.message }, { status: 500, headers })
     return data({ success: true, toast: `Bonus awarded: ${reason} (+${xp_delta} pts)` }, { headers })
 
+  } else if (intent === 'logout') {
+    await supabase.auth.signOut()
+    throw redirect('/login', { headers })
+
   } else if (intent === 'sunday-payout') {
     const xp_to_dollars = parseInt(formData.get('xp_to_dollars') as string) || 0
     const xp_to_screen_time = parseInt(formData.get('xp_to_screen_time') as string) || 0
@@ -75,70 +79,6 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   return data({ error: 'Unknown intent' }, { status: 400, headers })
-}
-
-const CORRECT_PIN = '1234'
-
-function PinModal({ onSuccess }: { onSuccess: () => void }) {
-  const [pin, setPin] = useState('')
-  const [attempts, setAttempts] = useState(0)
-  const [error, setError] = useState('')
-
-  function handleDigit(digit: string) {
-    if (attempts >= 3) return
-    const newPin = pin + digit
-    setPin(newPin)
-    if (newPin.length === 4) {
-      if (newPin === CORRECT_PIN) {
-        setError('')
-        onSuccess()
-      } else {
-        const next = attempts + 1
-        setAttempts(next)
-        setPin('')
-        setError(next >= 3 ? 'Ask Mom or Dad' : `Wrong PIN — ${3 - next} attempt${3 - next !== 1 ? 's' : ''} left`)
-      }
-    }
-  }
-
-  const digits = ['1','2','3','4','5','6','7','8','9','*','0','⌫']
-
-  return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-      <div className="bg-slate-800 rounded-2xl p-8 w-full max-w-xs mx-4 shadow-2xl">
-        <h2 className="text-white text-xl font-bold text-center mb-2">Parent Mode</h2>
-        <p className="text-slate-400 text-sm text-center mb-6">Enter PIN to continue</p>
-        <div className="flex justify-center gap-4 mb-6">
-          {[0,1,2,3].map(i => (
-            <div key={i} className={`w-4 h-4 rounded-full border-2 transition-colors ${
-              i < pin.length ? 'bg-blue-400 border-blue-400' : 'bg-transparent border-slate-500'
-            }`} />
-          ))}
-        </div>
-        {error && <p className="text-red-400 text-sm text-center mb-4">{error}</p>}
-        {attempts < 3 && (
-          <div className="grid grid-cols-3 gap-3">
-            {digits.map(digit => (
-              <button
-                key={digit}
-                onClick={() => {
-                  if (digit === '⌫') setPin(p => p.slice(0, -1))
-                  else if (digit !== '*') handleDigit(digit)
-                }}
-                className={`h-16 rounded-xl text-2xl font-bold transition-all active:scale-95 ${
-                  digit === '*' ? 'opacity-0 pointer-events-none' :
-                  digit === '⌫' ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' :
-                  'bg-slate-700 text-white hover:bg-slate-600 active:bg-blue-600'
-                }`}
-              >
-                {digit}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
 }
 
 export default function ParentPage() {
@@ -329,6 +269,19 @@ export default function ParentPage() {
           </div>
         </div>
       )}
+
+      {/* Sign out — bottom of page, low prominence */}
+      <div className="mt-8 pt-6 border-t border-slate-800 flex justify-center">
+        <form method="post">
+          <input type="hidden" name="intent" value="logout" />
+          <button
+            type="submit"
+            className="text-xs text-slate-600 hover:text-slate-400 transition-colors py-2 px-4"
+          >
+            Sign out
+          </button>
+        </form>
+      </div>
 
       {/* Penalty confirm modal */}
       {pendingPenalty && (

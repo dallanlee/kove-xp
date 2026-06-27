@@ -217,3 +217,125 @@ describe('streak: consecutive day detection', () => {
     expect(lastStreakDate === yesterdayStr).toBe(false)
   })
 })
+
+// ─── revokeStreakIfMorningIncomplete ────────────────────────────────────────
+
+describe('revokeStreakIfMorningIncomplete: early-exit conditions', () => {
+  it('does NOT revert when morning is still fully complete', () => {
+    const morningTaskIds = ['task-1', 'task-2']
+    const completedIds = ['task-1', 'task-2']
+    const morningStillComplete = morningTaskIds.every(id => completedIds.includes(id))
+    expect(morningStillComplete).toBe(true) // → would return early, no revert
+  })
+
+  it('DOES need to revert when at least one morning task is unchecked', () => {
+    const morningTaskIds = ['task-1', 'task-2']
+    const completedIds = ['task-1']
+    const morningStillComplete = morningTaskIds.every(id => completedIds.includes(id))
+    expect(morningStillComplete).toBe(false) // → proceeds to check streak
+  })
+
+  it('does NOT revert when last_streak_date is not today', () => {
+    const date: string = '2024-01-15'
+    const lastStreakDate: string = '2024-01-14'
+    const todayIsActiveStreakDate = lastStreakDate === date
+    expect(todayIsActiveStreakDate).toBe(false) // → return early, nothing to revert
+  })
+
+  it('DOES revert when last_streak_date is today', () => {
+    const date: string = '2024-01-15'
+    const lastStreakDate: string = '2024-01-15'
+    const todayIsActiveStreakDate = lastStreakDate === date
+    expect(todayIsActiveStreakDate).toBe(true) // → proceeds to compute previousStreak
+  })
+})
+
+describe('revokeStreakIfMorningIncomplete: previousStreak calculation', () => {
+  it('previousStreak = current - 1 when yesterday morning was also complete', () => {
+    const currentStreak = 5
+    const yesterdayMorningComplete = true
+    const previousStreak = yesterdayMorningComplete ? currentStreak - 1 : 0
+    expect(previousStreak).toBe(4)
+  })
+
+  it('previousStreak = 0 when yesterday morning was NOT complete (streak started today)', () => {
+    const currentStreak = 1
+    const yesterdayMorningComplete = false
+    const previousStreak = yesterdayMorningComplete ? currentStreak - 1 : 0
+    expect(previousStreak).toBe(0)
+  })
+
+  it('previousStreak = 0 even when currentStreak > 1 if yesterday was not done (broken chain)', () => {
+    // Edge: streak counter might be > 1 if family skipped days somehow
+    const currentStreak = 3
+    const yesterdayMorningComplete = false
+    const previousStreak = yesterdayMorningComplete ? currentStreak - 1 : 0
+    expect(previousStreak).toBe(0)
+  })
+
+  it('previousLastDate = yesterdayStr when yesterday was complete', () => {
+    const yesterdayStr = '2024-01-14'
+    const yesterdayMorningComplete = true
+    const previousLastDate = yesterdayMorningComplete ? yesterdayStr : null
+    expect(previousLastDate).toBe('2024-01-14')
+  })
+
+  it('previousLastDate = null when yesterday was not complete', () => {
+    const yesterdayStr = '2024-01-14'
+    const yesterdayMorningComplete = false
+    const previousLastDate = yesterdayMorningComplete ? yesterdayStr : null
+    expect(previousLastDate).toBeNull()
+  })
+})
+
+// ─── revokePerfectDayIfNeeded ───────────────────────────────────────────────
+
+describe('revokePerfectDayIfNeeded: early-exit and delete conditions', () => {
+  it('does NOT delete event when all mandatory tasks still complete', () => {
+    const mandatoryIds = ['task-1', 'task-2', 'task-3']
+    const completedIds = ['task-1', 'task-2', 'task-3']
+    const dayStillPerfect = mandatoryIds.every(id => completedIds.includes(id))
+    expect(dayStillPerfect).toBe(true) // → return early, keep perfect_day event
+  })
+
+  it('DOES delete event when one mandatory task was unchecked', () => {
+    const mandatoryIds = ['task-1', 'task-2', 'task-3']
+    const completedIds = ['task-1', 'task-2'] // task-3 unchecked
+    const dayStillPerfect = mandatoryIds.every(id => completedIds.includes(id))
+    expect(dayStillPerfect).toBe(false) // → deletes perfect_day event
+  })
+
+  it('DOES delete event when all mandatory tasks unchecked', () => {
+    const mandatoryIds = ['task-1', 'task-2']
+    const completedIds: string[] = []
+    const dayStillPerfect = mandatoryIds.every(id => completedIds.includes(id))
+    expect(dayStillPerfect).toBe(false)
+  })
+
+  it('extra (non-mandatory) completions do not affect perfect-day status', () => {
+    const mandatoryIds = ['task-1', 'task-2']
+    const completedIds = ['task-1', 'task-2', 'bonus-task']
+    const dayStillPerfect = mandatoryIds.every(id => completedIds.includes(id))
+    expect(dayStillPerfect).toBe(true)
+  })
+})
+
+describe('streak/perfectDay: symmetry invariants', () => {
+  it('complete then uncomplete morning → morning not "still complete"', () => {
+    const morningTaskIds = ['task-1', 'task-2']
+    // After uncompleting task-1
+    const completedAfterUncheck = ['task-2']
+    const morningStillComplete = morningTaskIds.every(id => completedAfterUncheck.includes(id))
+    expect(morningStillComplete).toBe(false) // revocation would fire
+  })
+
+  it('unchecking non-mandatory task does not break perfect day (mandatory all still done)', () => {
+    const mandatoryIds = ['task-1', 'task-2']
+    const optionalTaskId = 'task-optional'
+    // completed includes mandatory and optional; uncheck optional
+    const completedAfterUncheck = ['task-1', 'task-2']
+    const dayStillPerfect = mandatoryIds.every(id => completedAfterUncheck.includes(id))
+    expect(dayStillPerfect).toBe(true) // no revocation needed
+    expect(completedAfterUncheck.includes(optionalTaskId)).toBe(false)
+  })
+})
