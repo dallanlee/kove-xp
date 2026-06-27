@@ -1,7 +1,7 @@
 import { data, useFetcher, useLoaderData } from 'react-router'
 import type { LoaderFunctionArgs, ActionFunctionArgs } from 'react-router'
 import { useState, useEffect } from 'react'
-import { requireAuth } from '@/lib/auth'
+import { requireParent } from '@/lib/auth'
 import { getTodayMT } from '@/lib/date'
 import { runSundayPayout } from '@/lib/payout'
 
@@ -19,14 +19,14 @@ const PENALTIES = [
 ]
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const { headers } = await requireAuth(request)
+  const { headers } = await requireParent(request)
   const today = getTodayMT()
   const isSunday = new Date(today + 'T12:00:00').getDay() === 0
   return data({ isSunday }, { headers })
 }
 
 export async function action({ request }: ActionFunctionArgs) {
-  const { supabase, headers } = await requireAuth(request)
+  const { supabase, headers } = await requireParent(request)
   const formData = await request.formData()
   const intent = formData.get('intent') as string
   const today = getTodayMT()
@@ -143,7 +143,6 @@ function PinModal({ onSuccess }: { onSuccess: () => void }) {
 
 export default function ParentPage() {
   const { isSunday } = useLoaderData<typeof loader>()
-  const [unlocked, setUnlocked] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [pendingPenalty, setPendingPenalty] = useState<typeof PENALTIES[0] | null>(null)
   const [allowPayoutOverride, setAllowPayoutOverride] = useState(false)
@@ -178,7 +177,6 @@ export default function ParentPage() {
   const [xpToDollars, setXpToDollars] = useState('')
   const [xpToScreen, setXpToScreen] = useState('')
 
-  if (!unlocked) return <PinModal onSuccess={() => setUnlocked(true)} />
 
   const payoutResult = payoutFetcher.data?.payout
 
