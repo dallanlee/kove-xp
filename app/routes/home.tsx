@@ -3,7 +3,7 @@ import type { LoaderFunctionArgs, ActionFunctionArgs } from 'react-router'
 import { useState } from 'react'
 import { requireAuth } from '@/lib/auth'
 import { getTodayMT, formatFriendlyDate } from '@/lib/date'
-import { updateStreakAfterMorningCompletion, checkPerfectDay } from '@/lib/streaks'
+import { updateStreakAfterMorningCompletion, checkPerfectDay, revokeStreakIfMorningIncomplete, revokePerfectDayIfNeeded } from '@/lib/streaks'
 import PointsBar from '@/components/PointsBar'
 import StreakCounter from '@/components/StreakCounter'
 import type { Task, XpEvent } from '@/types/database'
@@ -77,10 +77,18 @@ export async function action({ request }: ActionFunctionArgs) {
     await checkPerfectDay(supabase, date)
 
   } else if (intent === 'uncomplete') {
+    const { data: task } = await supabase.from('tasks').select('period').eq('id', task_id).single()
+
     await supabase.from('daily_completions').delete()
       .eq('task_id', task_id).eq('completed_date', date)
     await supabase.from('xp_events').delete()
       .eq('event_type', 'task').eq('event_date', date).eq('task_id', task_id)
+
+    // Revoke bonuses that no longer apply after this uncomplete
+    await revokePerfectDayIfNeeded(supabase, date)
+    if (task?.period === 'morning') {
+      await revokeStreakIfMorningIncomplete(supabase, date)
+    }
   }
 
   return data({ success: true }, { headers })

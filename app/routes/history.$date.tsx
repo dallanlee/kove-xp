@@ -3,6 +3,7 @@ import { data, Link, useFetcher, useLoaderData } from 'react-router'
 import type { LoaderFunctionArgs, ActionFunctionArgs } from 'react-router'
 import { requireAuth } from '@/lib/auth'
 import { getTodayMT, formatFriendlyDate } from '@/lib/date'
+import { updateStreakAfterMorningCompletion, checkPerfectDay, revokeStreakIfMorningIncomplete, revokePerfectDayIfNeeded } from '@/lib/streaks'
 import type { Task, XpEvent } from '@/types/database'
 
 const PERIOD_ORDER = ['morning', 'afternoon', 'bedtime', 'health']
@@ -84,11 +85,24 @@ export async function action({ request, params }: ActionFunctionArgs) {
         actor: 'kove',
       })
     }
+
+    if (task.period === 'morning') {
+      await updateStreakAfterMorningCompletion(supabase, date)
+    }
+    await checkPerfectDay(supabase, date)
+
   } else if (intent === 'uncomplete') {
+    const { data: task } = await supabase.from('tasks').select('period').eq('id', task_id).single()
+
     await supabase.from('daily_completions').delete()
       .eq('task_id', task_id).eq('completed_date', date)
     await supabase.from('xp_events').delete()
       .eq('event_type', 'task').eq('event_date', date).eq('task_id', task_id)
+
+    await revokePerfectDayIfNeeded(supabase, date)
+    if (task?.period === 'morning') {
+      await revokeStreakIfMorningIncomplete(supabase, date)
+    }
   }
 
   return data({ success: true }, { headers })
