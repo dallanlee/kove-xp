@@ -1,11 +1,12 @@
 import { data, useFetcher, useLoaderData } from 'react-router'
 import type { LoaderFunctionArgs, ActionFunctionArgs } from 'react-router'
+import { useState } from 'react'
 import { requireAuth } from '@/lib/auth'
 import { getTodayMT, formatFriendlyDate } from '@/lib/date'
 import { updateStreakAfterMorningCompletion, checkPerfectDay } from '@/lib/streaks'
 import PointsBar from '@/components/PointsBar'
 import StreakCounter from '@/components/StreakCounter'
-import type { Task } from '@/types/database'
+import type { Task, XpEvent } from '@/types/database'
 
 const PERIOD_LABELS: Record<string, string> = {
   morning: 'Morning',
@@ -29,13 +30,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
       .in('period', ['morning', 'afternoon', 'bedtime', 'health']).order('sort_order'),
     supabase.from('daily_completions').select('task_id').eq('completed_date', today),
     supabase.from('families').select('current_streak, xp_balance').single(),
-    supabase.from('xp_events').select('xp_delta').eq('event_date', today),
+    supabase.from('xp_events').select('*').eq('event_date', today).order('created_at'),
   ])
 
   const todayPts = (xpEvents || []).reduce((sum: number, e: { xp_delta: number }) => sum + e.xp_delta, 0)
   const completedTaskIds = (completions || []).map((c: { task_id: string }) => c.task_id)
 
-  return data({ tasks: (tasks || []) as Task[], completedTaskIds, family, todayPts, today }, { headers })
+  return data({ tasks: (tasks || []) as Task[], completedTaskIds, family, todayPts, today, xpEvents: (xpEvents || []) as XpEvent[] }, { headers })
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -128,8 +129,50 @@ function TaskItem({ task, done, date }: { task: Task; done: boolean; date: strin
   )
 }
 
+function TodayLedger({ events, totalPts }: { events: XpEvent[]; totalPts: number }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="border-t border-slate-700 pt-4 mt-2">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between text-sm text-slate-400 hover:text-white py-2"
+      >
+        <span>Today's Point Events ({events.length})</span>
+        <span>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="mt-3 space-y-2">
+          {events.length === 0 ? (
+            <p className="text-slate-500 text-sm">No events yet today.</p>
+          ) : (
+            events.map(event => (
+              <div key={event.id} className="flex items-center justify-between bg-slate-800 rounded-xl px-3 py-2 border border-slate-700">
+                <div>
+                  <div className="text-sm text-white">{event.reason}</div>
+                  <div className="text-xs text-slate-500">
+                    {event.actor === 'parent' ? '🔒 Parent' : '⭐ Kove'} · {event.event_type.replace(/_/g, ' ')}
+                  </div>
+                </div>
+                <span className={`text-sm font-bold ${event.xp_delta >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                  {event.xp_delta >= 0 ? '+' : ''}{event.xp_delta} pts
+                </span>
+              </div>
+            ))
+          )}
+          <div className="flex justify-between text-sm font-bold pt-2 border-t border-slate-700">
+            <span className="text-slate-400">Net today</span>
+            <span className={totalPts >= 0 ? 'text-blue-400' : 'text-red-400'}>
+              {totalPts >= 0 ? '+' : ''}{totalPts.toLocaleString()} pts
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function HomePage() {
-  const { tasks, completedTaskIds, family, todayPts, today } = useLoaderData<typeof loader>()
+  const { tasks, completedTaskIds, family, todayPts, today, xpEvents } = useLoaderData<typeof loader>()
 
   const tasksByPeriod: Record<string, Task[]> = {}
   for (const task of tasks) {
@@ -194,6 +237,8 @@ export default function HomePage() {
           </div>
         )
       })}
+
+      <TodayLedger events={xpEvents} totalPts={todayPts} />
 
       <div className="h-4" />
     </div>
