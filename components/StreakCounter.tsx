@@ -1,5 +1,3 @@
-'use client'
-
 interface StreakCounterProps {
   streak: number
 }
@@ -28,7 +26,7 @@ export default function StreakCounter({ streak }: StreakCounterProps) {
         </div>
       )}
       {streak >= 14 && (
-        <div className="text-xs text-yellow-400 mt-1">
+        <div className="text-xs text-blue-400 mt-1">
           Max milestone reached! Keep it up!
         </div>
       )}

@@ -44,8 +44,9 @@ export async function getFamily(supabase: SupabaseClient): Promise<Family> {
   const { data, error } = await supabase
     .from('families')
     .select('*')
-    .single()
+    .maybeSingle()
 
   if (error) throw error
+  if (!data) throw new Error('No family row found — check the families table has a row and RLS allows reads.')
   return data as Family
 }

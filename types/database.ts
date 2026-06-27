@@ -44,6 +44,7 @@ export interface XpEvent {
   event_type: EventType
   task_id: string | null
   event_date: string
+  actor: 'kove' | 'parent' | null
   created_at: string
 }
 

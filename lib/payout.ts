@@ -1,21 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getFamily } from './xp'
 import { getTasks, getDailyCompletions, getWeeklyCompletions } from './tasks'
-
-function getMostRecentMonday(fromDate: Date = new Date()): string {
-  const d = new Date(fromDate)
-  const day = d.getDay() // 0=Sun, 1=Mon...
-  // Days since last Monday
-  const diff = day === 0 ? 6 : day - 1
-  d.setDate(d.getDate() - diff)
-  return d.toISOString().split('T')[0]
-}
-
-function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr)
-  d.setDate(d.getDate() + days)
-  return d.toISOString().split('T')[0]
-}
+import { getMostRecentMondayMT, addDaysToDate } from './date'
 
 export interface PayoutSummary {
   weekStart: string
@@ -37,9 +23,9 @@ export async function runSundayPayout(
   xpToDollarsInput: number,
   xpToScreenTimeInput: number
 ): Promise<PayoutSummary> {
-  // 1. Calculate weekStart
-  const weekStart = getMostRecentMonday()
-  const weekEnd = addDays(weekStart, 6) // Sunday
+  // 1. Calculate weekStart in Mountain Time
+  const weekStart = getMostRecentMondayMT()
+  const weekEnd = addDaysToDate(weekStart, 6) // Sunday
 
   // 2. Sum gross XP for the week (exclude payout_conversion)
   const { data: events, error: eventsError } = await supabase
@@ -70,7 +56,7 @@ export async function runSundayPayout(
   // Check each day of the week
   let allDaysComplete = true
   for (let i = 0; i < 7; i++) {
-    const dayDate = addDays(weekStart, i)
+    const dayDate = addDaysToDate(weekStart, i)
     const completions = await getDailyCompletions(supabase, dayDate)
     const completedIds = completions.map(c => c.task_id)
     const dayComplete = mandatoryTaskIds.every(id => completedIds.includes(id))
@@ -90,6 +76,7 @@ export async function runSundayPayout(
       event_type: 'perfect_week',
       task_id: null,
       event_date: weekEnd,
+      actor: 'kove',
     })
     if (bonusError) throw bonusError
   }
