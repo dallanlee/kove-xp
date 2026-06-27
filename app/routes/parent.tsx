@@ -1,4 +1,4 @@
-import { data, useFetcher, useLoaderData, redirect } from 'react-router'
+import { data, useFetcher, useLoaderData } from 'react-router'
 import type { LoaderFunctionArgs, ActionFunctionArgs } from 'react-router'
 import { useState, useEffect } from 'react'
 import { requireParent } from '@/lib/auth'
@@ -62,10 +62,6 @@ export async function action({ request }: ActionFunctionArgs) {
     })
     if (error) return data({ error: error.message }, { status: 500, headers })
     return data({ success: true, toast: `Bonus awarded: ${reason} (+${xp_delta} pts)` }, { headers })
-
-  } else if (intent === 'logout') {
-    await supabase.auth.signOut()
-    throw redirect('/login', { headers })
 
   } else if (intent === 'sunday-payout') {
     const xp_to_dollars = parseInt(formData.get('xp_to_dollars') as string) || 0
@@ -272,8 +268,7 @@ export default function ParentPage() {
 
       {/* Sign out — bottom of page, low prominence */}
       <div className="mt-8 pt-6 border-t border-slate-800 flex justify-center">
-        <form method="post">
-          <input type="hidden" name="intent" value="logout" />
+        <form method="post" action="/logout">
           <button
             type="submit"
             className="text-xs text-slate-600 hover:text-slate-400 transition-colors py-2 px-4"

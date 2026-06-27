@@ -8,4 +8,5 @@ export default [
   route('login', 'routes/login.tsx'),
   route('history', 'routes/history.tsx'),
   route('history/:date', 'routes/history.$date.tsx'),
+  route('logout', 'routes/logout.ts'),
 ] satisfies RouteConfig

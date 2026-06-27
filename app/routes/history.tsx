@@ -144,6 +144,17 @@ export default function HistoryPage() {
           None
         </span>
       </div>
+
+      <div className="mt-10 flex justify-center">
+        <form method="post" action="/logout">
+          <button
+            type="submit"
+            className="text-xs text-slate-700 hover:text-slate-500 transition-colors py-2 px-4"
+          >
+            Sign out
+          </button>
+        </form>
+      </div>
     </div>
   )
 }
